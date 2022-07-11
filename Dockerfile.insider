@@ -1,0 +1,37 @@
+FROM php:8.1-fpm-buster
+
+RUN apt-get update \
+	&& apt-get install -y wget gnupg apt-transport-https zlib1g-dev libpng-dev --no-install-recommends \
+	&& apt-get update 
+RUN apt-get install -y default-mysql-client libmagickwand-dev locales --no-install-recommends
+RUN sed -i 's/# tr_TR.UTF-8 UTF-8/tr_TR.UTF-8 UTF-8/' /etc/locale.gen \
+    && sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+    && sed -i 's/# az_AZ.UTF-8 UTF-8/az_AZ.UTF-8 UTF-8/' /etc/locale.gen \
+    && sed -i 's/# ar_AE.UTF-8 UTF-8/ar_AE.UTF-8 UTF-8/' /etc/locale.gen \
+    && locale-gen
+RUN apt-get install -y unixodbc-dev --no-install-recommends
+RUN pecl install imagick redis
+RUN apt-get install -y libzip-dev
+RUN docker-php-ext-enable imagick \
+    && docker-php-ext-configure pcntl --enable-pcntl \
+    && docker-php-ext-enable redis \
+    && docker-php-ext-install pcntl pdo_mysql zip bcmath opcache
+
+RUN sed -i 's/CipherString = DEFAULT@SECLEVEL=2/CipherString = DEFAULT@SECLEVEL=1/' /etc/ssl/openssl.cnf
+
+# Add user for laravel application
+RUN groupadd -g 1000 www
+RUN useradd -u 1000 -ms /bin/bash -g www www
+
+# Install composer files
+COPY --from=composer:2.1 /usr/bin/composer /usr/bin/composer
+
+RUN mkdir -p /var/www/insider
+WORKDIR /var/www/insider
+ADD . .
+ADD storage /var/www/insider/storage_new
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-scripts --ignore-platform-reqs --no-autoloader \
+    && chown -R www:www /var/www/insider/vendor \
+    && chown -R www:www /var/www/insider/storage_new
+
+RUN composer dump-autoload --no-scripts --optimize

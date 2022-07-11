@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/instance: php
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        version: v1.14
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - image: registry.cloud.okteto.net/insider-epicdog/nginx:latest 
+        imagePullPolicy: IfNotPresent
+        name: web
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d 
+      # Load the configuration files for nginx
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config

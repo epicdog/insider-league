@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: insider
+    labels:
+        tier: backend
+spec:
+    ports:
+        -   name: php
+            port: 9000
+            protocol: TCP
+    selector:
+        app: insider
+        tier: backend

@@ -1,0 +1,41 @@
+build:
+  insider:
+    image: registry.cloud.okteto.net/insider-epicdog/insider:latest
+    context: .
+    dockerfile: Dockerfile.insider
+  web:
+    image: registry.cloud.okteto.net/insider-epicdog/nginx:latest
+    context: .
+    dockerfile: Dockerfile.nginx
+deploy:
+  - kubectl apply -k ./k8s
+dev:
+  insider:
+    command: ["bash"]
+    image: registry.cloud.okteto.net/insider-epicdog/insider:latest
+    forward:
+      - 9000:9000
+    sync:
+      - .:/var/www/insider
+    envFiles:
+    - .env
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      fsGroup: 0
+    persistentVolume:
+      enabled: false
+      storageClass: standard
+      size: 1Gi
+  web:
+    forward:
+      - 80:80
+    reverse:
+      - 9000:9000
+    image: registry.cloud.okteto.net/insider-epicdog/nginx:latest
+    sync:
+      - public:/var/www/insider/public
+    persistentVolume:
+      enabled: false
+      storageClass: standard
+      size: 1Gi
